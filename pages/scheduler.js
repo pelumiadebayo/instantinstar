@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 
-import "./styles.css";
 
 const Scheduler=() =>{
   const [imageUrl, setImageUrl] = useState("");
