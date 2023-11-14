@@ -1,125 +1,48 @@
 import React, { useEffect, useState } from "react";
+import Layout from "@/Components/Layout";
+import { accountService } from "@/Service";
+import Router from "next/router";
 
 
 const Scheduler=() =>{
   const [imageUrl, setImageUrl] = useState("");
   const [postCaption, setPostCaption] = useState("");
   const [isSharingPost, setIsSharingPost] = useState(false);
-  const [facebookUserAccessToken, setFacebookUserAccessToken] = useState("");
+  const [account, setAccount] = useState(null);
 
-  /* --------------------------------------------------------
-   *                      FACEBOOK LOGIN
-   * --------------------------------------------------------
-   */
-
-  // Check if the user is authenticated with Facebook
   useEffect(() => {
-    window.FB.getLoginStatus((response) => {
-      setFacebookUserAccessToken(response.authResponse?.accessToken);
+    //console.log(accountService);
+    accountService.account.subscribe(loggedInAccount => {
+      setAccount(loggedInAccount);
+      console.log(loggedInAccount)
+       //TODO:Account is null on refresh
+      //check if login
+      // if (!loggedInAccount) {
+      //   Router.push("/")
+      // }
     });
-  }, []);
+ }, []);
 
-  const logInToFB = () => {
-    window.FB.login(
-      (response) => {
-        setFacebookUserAccessToken(response.authResponse?.accessToken);
-      },
-      {
-        // Scopes that allow us to publish content to Instagram
-        scope: "instagram_basic,pages_show_list",
-      }
-    );
-  };
 
-  const logOutOfFB = () => {
-    window.FB.logout(() => {
-      setFacebookUserAccessToken(undefined);
-    });
-  };
-
+ 
   /* --------------------------------------------------------
    *             INSTAGRAM AND FACEBOOK GRAPH APIs
    * --------------------------------------------------------
    */
-
-  const getFacebookPages = () => {
-    return new Promise((resolve) => {
-      window.FB.api(
-        "me/accounts",
-        { access_token: facebookUserAccessToken },
-        (response) => {
-          resolve(response.data);
-        }
-      );
-    });
-  };
-
-  const getInstagramAccountId = (facebookPageId) => {
-    return new Promise((resolve) => {
-      window.FB.api(
-        facebookPageId,
-        {
-          access_token: facebookUserAccessToken,
-          fields: "instagram_business_account",
-        },
-        (response) => {
-          resolve(response.instagram_business_account.id);
-        }
-      );
-    });
-  };
-
-  const createMediaObjectContainer = (instagramAccountId) => {
-    return new Promise((resolve) => {
-      window.FB.api(
-        `${instagramAccountId}/media`,
-        "POST",
-        {
-          access_token: facebookUserAccessToken,
-          image_url: imageUrl,
-          caption: postCaption,
-        },
-        (response) => {
-          resolve(response.id);
-        }
-      );
-    });
-  };
-
-  const publishMediaObjectContainer = (
-    instagramAccountId,
-    mediaObjectContainerId
-  ) => {
-    return new Promise((resolve) => {
-      window.FB.api(
-        `${instagramAccountId}/media_publish`,
-        "POST",
-        {
-          access_token: facebookUserAccessToken,
-          creation_id: mediaObjectContainerId,
-        },
-        (response) => {
-          resolve(response.id);
-        }
-      );
-    });
-  };
-
   const shareInstagramPost = async () => {
     setIsSharingPost(true);
-    const facebookPages = await getFacebookPages();
-    const instagramAccountId = await getInstagramAccountId(facebookPages[0].id);
-    const mediaObjectContainerId = await createMediaObjectContainer(
-      instagramAccountId
-    );
+    console.log(account)
+    const facebookPages = await accountService.getFacebookPages(account.accessToken);
+    console.log(facebookPages)
+    const instagramAccountId = await accountService.getInstagramAccountId(facebookPages[0].id);
+    const mediaObjectContainerId = await accountService.createMediaObjectContainer(instagramAccountId);
 
-    await publishMediaObjectContainer(
+    await accountService.publishMediaObjectContainer(
       instagramAccountId,
       mediaObjectContainerId
     );
 
     setIsSharingPost(false);
-
     // Reset the form state
     setImageUrl("");
     setPostCaption("");
@@ -127,19 +50,7 @@ const Scheduler=() =>{
 
   return (
       <div id="app-main">
-        <section className="app-section">
-          <h3>1. Log in with Facebook</h3>
-          {facebookUserAccessToken ? (
-            <button onClick={logOutOfFB} className="btn action-btn">
-              Log out of Facebook
-            </button>
-          ) : (
-            <button onClick={logInToFB} className="btn action-btn">
-              Login with Facebook
-            </button>
-          )}
-        </section>
-        {facebookUserAccessToken ? (
+        {account?.accessToken ? (
           <section className="app-section">
             <h3>2. Send a post to Instagram</h3>
             <input
@@ -165,5 +76,11 @@ const Scheduler=() =>{
       </div>
     )
 }
-
+Scheduler.getLayout  = function getLayout(page){
+  return(
+    <Layout>
+      {page}
+    </Layout>
+  )
+}
 export default Scheduler;

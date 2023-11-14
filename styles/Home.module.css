@@ -7,6 +7,10 @@
   min-height: 100vh;
 }
 
+.btnfacebook:hover {
+    color: #fff;
+    opacity: 0.8;
+}
 .description {
   display: inherit;
   justify-content: inherit;
